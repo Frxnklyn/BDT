@@ -353,7 +353,12 @@
             "COPY_WITH_RELATED_OBJECT": 0,
             "DELETE_WITH_RELATED_OBJECT": 0,
             "DEFAULT_DISPLAY_UXON": null,
-            "COMMENTS": "IMPORTANT: since this is a file path, the delimiter MUST be something, that is not allowed in a file system - e.g. a pipe (`|`)\n\nThe default value composes the path from the app and the folder name, so that a feature file can be created by picking an app and typing a folder name instead of typing the whole path. It is only applied if no path was provided explicitly - e.g. when copying an existing feature file the path of the copy is used as-is.",
+            "COMMENTS": [
+                "// Multiline text delimited by `\n`",
+                "IMPORTANT: since this is a file path, the delimiter MUST be something, that is not allowed in a file system - e.g. a pipe (`|`)",
+                "",
+                "The default value composes the path from the app and the folder name, so that a feature file can be created by picking an app and typing a folder name instead of typing the whole path. It is only applied if no path was provided explicitly - e.g. when copying an existing feature file the path of the copy is used as-is."
+            ],
             "NAME": "Folder path",
             "RELATION_CARDINALITY": "",
             "TYPE": "D",

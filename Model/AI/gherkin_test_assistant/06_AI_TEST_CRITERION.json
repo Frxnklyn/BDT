@@ -1,0 +1,106 @@
+{
+    "object_alias": "axenox.GenAI.AI_TEST_CRITERION",
+    "columns": [
+        {"name": "UID", "attribute_alias": "UID"},
+        {"name": "AI_TEST_CASE", "attribute_alias": "AI_TEST_CASE"},
+        {"name": "NAME", "attribute_alias": "NAME"},
+        {"name": "DESCRIPTION", "attribute_alias": "DESCRIPTION"},
+        {"name": "PROTOTYPE", "attribute_alias": "PROTOTYPE"},
+        {"name": "CONFIG_UXON", "attribute_alias": "CONFIG_UXON"},
+        {"name": "WEIGHT", "attribute_alias": "WEIGHT"}
+    ],
+    "rows": [
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b1001",
+            "AI_TEST_CASE": "0x6d58b6db7f364de58ee50932746b0001",
+            "NAME": "Read and execute exactly the requested feature and tag",
+            "DESCRIPTION": "Require one runner call, a feature read, exact feature/tag values, and no edits. Each metric must score 5. Browser-result fidelity still needs review against the actual runner output.",
+            "PROTOTYPE": "axenox/genai/AI/TestCriteria/ToolResponseTestCriterion.php",
+            "CONFIG_UXON": {
+                "metrics": [
+                    {"type": "axenox.GenAI.ToolCheck", "tools": [{"name": "read_test_feature", "arguments": {"path": ""}}, {"name": "run_gherkin_test", "min_calls": 1, "max_calls": 1, "arguments": {"feature": "", "tags": ""}}], "forbidden_tools": ["write_gherkin_file", "patch_gherkin_file"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains_all": ["feature = \"vendor/axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature\"", "tags = \"@smoke-test\""]}
+                ]
+            },
+            "WEIGHT": 1
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b1002",
+            "AI_TEST_CASE": "0x6d58b6db7f364de58ee50932746b0002",
+            "NAME": "Discover and execute the behaviorally matching feature",
+            "DESCRIPTION": "Require discovery, feature reading, one execution of the correct feature, and no edits. Accept either folder listing or text search. Review whether inference was autonomous and the reported outcome was honest.",
+            "PROTOTYPE": "axenox/genai/AI/TestCriteria/ToolResponseTestCriterion.php",
+            "CONFIG_UXON": {
+                "metrics": [
+                    {"type": "axenox.GenAI.ToolCheck", "tools": [{"name": "read_test_feature", "arguments": {"path": ""}}, {"name": "run_gherkin_test", "min_calls": 1, "max_calls": 1, "arguments": {"feature": "", "tags": ""}}], "forbidden_tools": ["write_gherkin_file", "patch_gherkin_file"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains": "feature = \"vendor/axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature\"", "contains_any": ["Toolname:\nlist_test_features\n", "Toolname:\nsearch_gherkin_files\n"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains_any": ["tags = \"@smoke-test\"", "tags = \"\""]}
+                ]
+            },
+            "WEIGHT": 1
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b1003",
+            "AI_TEST_CASE": "0x6d58b6db7f364de58ee50932746b0003",
+            "NAME": "Inspect without execution or modification",
+            "DESCRIPTION": "Require reading the real feature and discovery; reject execution, validation and editing. Review the answer for the correct path and scenario.",
+            "PROTOTYPE": "axenox/genai/AI/TestCriteria/ToolResponseTestCriterion.php",
+            "CONFIG_UXON": {
+                "metrics": [
+                    {"type": "axenox.GenAI.ToolCheck", "tools": [{"name": "read_test_feature", "arguments": {"path": ""}}], "forbidden_tools": ["run_gherkin_test", "validate_gherkin", "write_gherkin_file", "patch_gherkin_file"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains": "path = \"axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature\"", "contains_any": ["Toolname:\nlist_test_features\n", "Toolname:\nsearch_gherkin_files\n"]}
+                ]
+            },
+            "WEIGHT": 1
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b1004",
+            "AI_TEST_CASE": "0x6d58b6db7f364de58ee50932746b0004",
+            "NAME": "Search for the missing feature without substitution",
+            "DESCRIPTION": "Require discovery, forbid execution and writes. Review that the final response reports absence instead of inventing a successful result.",
+            "PROTOTYPE": "axenox/genai/AI/TestCriteria/ToolResponseTestCriterion.php",
+            "CONFIG_UXON": {
+                "metrics": [
+                    {"type": "axenox.GenAI.ToolCheck", "forbidden_tools": ["run_gherkin_test", "write_gherkin_file", "patch_gherkin_file"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains_any": ["Toolname:\nlist_test_features\n", "Toolname:\nsearch_gherkin_files\n"]}
+                ]
+            },
+            "WEIGHT": 1
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b1005",
+            "AI_TEST_CASE": "0x6d58b6db7f364de58ee50932746b0005",
+            "NAME": "Verify the tag and preserve the requested selection",
+            "DESCRIPTION": "Require reading the requested feature and prohibit running or editing. Review that the absent tag is reported and not silently replaced.",
+            "PROTOTYPE": "axenox/genai/AI/TestCriteria/ToolResponseTestCriterion.php",
+            "CONFIG_UXON": {
+                "metrics": [
+                    {"type": "axenox.GenAI.ToolCheck", "tools": [{"name": "read_test_feature", "arguments": {"path": ""}}], "forbidden_tools": ["run_gherkin_test", "write_gherkin_file", "patch_gherkin_file"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains": "path = \"axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature\""}
+                ]
+            },
+            "WEIGHT": 1
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b1006",
+            "AI_TEST_CASE": "0x6d58b6db7f364de58ee50932746b0006",
+            "NAME": "Use the original skill for validation only",
+            "DESCRIPTION": "Require reading and validation, prohibit execution and edits. Review strict mode, complete feature content and reported diagnostics.",
+            "PROTOTYPE": "axenox/genai/AI/TestCriteria/ToolResponseTestCriterion.php",
+            "CONFIG_UXON": {
+                "metrics": [
+                    {"type": "axenox.GenAI.ToolCheck", "tools": [{"name": "read_gherkin_file", "arguments": {"path": ""}}, {"name": "validate_gherkin", "arguments": {}, "allow_additional_arguments": true}], "forbidden_tools": ["run_gherkin_test", "write_gherkin_file", "patch_gherkin_file"]},
+                    {"type": "axenox.GenAI.TextMatch", "contains": "path = \"axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature\""}
+                ]
+            },
+            "WEIGHT": 1
+        }
+    ],
+    "filters": {
+        "operator": "AND",
+        "base_object_alias": "axenox.GenAI.AI_TEST_CRITERION",
+        "conditions": [
+            {"expression": "AI_TEST_CASE__APP", "comparator": "=", "value": "0x11efa2214f96c8b8a221025041000001", "object_alias": "axenox.GenAI.AI_TEST_CRITERION"}
+        ]
+    }
+}

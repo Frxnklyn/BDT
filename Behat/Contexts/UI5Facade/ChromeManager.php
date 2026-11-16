@@ -381,6 +381,10 @@ class ChromeManager
         $pid = $this->findPidByPort($port);
         $this->getLogbook()->addIndent(-1);
 
+        if ($pid === null) {
+            throw new RuntimeException('Chrome debug API is ready on port ' . $port . ', but its listening process ID could not be resolved.');
+        }
+
         $this->pid  = $pid;
         $this->port = $port;
 
@@ -720,9 +724,11 @@ class ChromeManager
      *
      * Used to retrieve the Chrome PID after launching it with "start /B",
      * which does not return a PID directly.
+    * Match the wildcard remote endpoint rather than the translated connection state so
+    * German Windows and IPv6 listeners are recognized without accepting established connections.
      *
      * @param int $port The remote-debugging port Chrome is listening on
-     * @return int|null The PID, or null if no matching LISTENING process was found
+    * @return int|null The PID, or null if no matching listening process was found
      */
     private function findPidByPort(int $port): ?int
     {
@@ -730,17 +736,21 @@ class ChromeManager
         $this->getLogbook()->addIndent(+1);
 
         $output = [];
-        exec('netstat -ano -p TCP', $output);
+        $exitCode = 0;
+        exec('netstat -ano -p TCP', $output, $exitCode);
+        if ($exitCode !== 0) {
+            throw new RuntimeException('Cannot resolve the Chrome process ID: netstat exited with code ' . $exitCode . '.');
+        }
         foreach ($output as $line) {
-            if (preg_match('/(?:0\.0\.0\.0|127\.0\.0\.1):' . $port . '\s+.*LISTENING\s+(\d+)/', $line, $matches)) {
+            if (preg_match('/^\s*TCP\s+(?:0\.0\.0\.0|127\.0\.0\.1|\[::(?:1)?\]):' . $port . '\s+(?:0\.0\.0\.0|\[::\]):0\s+\S+\s+([1-9]\d*)\s*$/', $line, $matches)) {
                 $pid = (int) $matches[1];
-                $this->getLogbook()->addLine("Found LISTENING process with PID {$pid}");
+                $this->getLogbook()->addLine("Found listening process with PID {$pid}");
                 $this->getLogbook()->addIndent(-1);
                 return $pid;
             }
         }
 
-        $this->getLogbook()->addLine("No LISTENING process found on port {$port}");
+        $this->getLogbook()->addLine("No listening process found on port {$port}");
         $this->getLogbook()->addIndent(-1);
         return null;
     }

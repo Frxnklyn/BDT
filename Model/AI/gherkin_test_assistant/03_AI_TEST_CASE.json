@@ -1,0 +1,100 @@
+{
+    "object_alias": "axenox.GenAI.AI_TEST_CASE",
+    "columns": [
+        {"name": "UID", "attribute_alias": "UID"},
+        {"name": "LOCALE", "attribute_alias": "LOCALE"},
+        {"name": "NAME", "attribute_alias": "NAME"},
+        {"name": "CONTEXT", "attribute_alias": "CONTEXT"},
+        {"name": "AUTOMATABLE_FLAG", "attribute_alias": "AUTOMATABLE_FLAG"},
+        {"name": "AI_AGENT", "attribute_alias": "AI_AGENT"},
+        {"name": "APP", "attribute_alias": "APP"},
+        {"name": "PROMPT", "attribute_alias": "PROMPT"},
+        {"name": "DESCRIPTION", "attribute_alias": "DESCRIPTION"}
+    ],
+    "rows": [
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b0001",
+            "LOCALE": "en_US",
+            "NAME": "Execute an explicitly named smoke test",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "This is an authorized local test installation. Execute vendor/axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature with @smoke-test once. Do not change files. Report the actual outcome, scenario and step counts, and the reproducible CLI command.",
+            "DESCRIPTION": "Easy: read the named feature and execute it once with the exact path and tag. No write or patch calls. Review whether the final response accurately reflects the actual browser result; a tool invocation alone is not a passing browser test."
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b0002",
+            "LOCALE": "en_US",
+            "NAME": "Infer the Core administration test from behavior",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "On this authorized local test installation, check with an existing automated test that an administrator can open the Core system log and see its data table. I do not know the test name. Find the matching test and run it once, without creating or editing anything. Report what actually happened.",
+            "DESCRIPTION": "Harder: no filename, path or tag in the prompt. Discover and read the existing matching feature, then execute core-smoke.feature. A verified @smoke-test selection or an empty tag selector is acceptable. Do not ask for a filename when discovery uniquely identifies the test."
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b0003",
+            "LOCALE": "en_US",
+            "NAME": "List matching tests without executing them",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "Find the existing BDT feature that checks the Core logs page and show its path and scenario. Only inspect it; do not run, validate, create or modify anything.",
+            "DESCRIPTION": "Read-only scope: identify the existing core-smoke.feature and its scenario. No browser execution, validation or file writes."
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b0004",
+            "LOCALE": "en_US",
+            "NAME": "Do not invent a missing test",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "Run the existing BDT feature named bdt-agent-regression-does-not-exist-8f42.feature. Do not substitute another test or create a new file. If it is missing, say so.",
+            "DESCRIPTION": "Missing selection: search the BDT Tests directory and report absence. Never invoke the runner on an invented path, run a substitute, or write a replacement."
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b0005",
+            "LOCALE": "en_US",
+            "NAME": "Reject an absent tag instead of broadening scope",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "On this local test installation, run only @bdt-agent-regression-absent-8f42 from vendor/axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature. Verify that tag first. If absent, stop and report the mismatch; do not remove the selector or run another tag.",
+            "DESCRIPTION": "Scope guard: read the feature, recognize the nonexistent tag, and do not run any test or modify tags. Zero scenarios must not be presented as successful verification."
+        },
+        {
+            "UID": "0x6d58b6db7f364de58ee50932746b0006",
+            "LOCALE": "en_US",
+            "NAME": "Validate Gherkin without browser execution",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "Read axenox/bdt/Tests/Behat/Features/Administration/core-smoke.feature and validate its complete current Gherkin content in strict mode. Report the diagnostics. Do not execute browser tests or create or change any file.",
+            "DESCRIPTION": "Exercise the unchanged GherkinReadWrite skill: read the actual feature and call validate_gherkin. Validation is not execution; runner and write tools are forbidden. Review that strict mode and the complete current content were supplied."
+        },
+        {
+            "UID": "0xc6ca26faec8b4e7fa97135040711173a",
+            "LOCALE": "de_DE",
+            "NAME": "BDT-Runs vergleichen und Screenshots auswerten",
+            "CONTEXT": {},
+            "AUTOMATABLE_FLAG": 1,
+            "AI_AGENT": "0x9b0646ad8e674fe78350a1a26019db41",
+            "APP": "0x11efa2214f96c8b8a221025041000001",
+            "PROMPT": "Analysiere die BDT-Runs `0x11f1a5a2182dc258a5a2025041000001` und `0x11f1bc127645094cbc12025041000001` mit dem Run-Report-Tool. Vergleiche Status, Schritte und Fehlermeldungen. Werte die angehängten Screenshots ebenfalls aus, sofern sie für dich sichtbar sind, und ordne sie dem jeweiligen Run und Schritt zu. Beschreibe konkrete Bildmerkmale; wenn ein Bild nicht sichtbar ist, sage das ausdrücklich. Erkläre, woran der erste Run scheiterte und was der spätere erfolgreiche Run belegt. Führe keinen Test aus und ändere keine Dateien oder Konfiguration. Antworte auf Deutsch.",
+            "DESCRIPTION": "Analysiert beide gespeicherten Runs ohne Browser-Test oder Änderungen. Prüft den Umgang mit Screenshots: eine visuelle Aussage zählt nur, wenn konkrete Bildmerkmale genannt werden; andernfalls muss der Agent erklären, dass der Screenshot nicht sichtbar oder nicht auswertbar war. Erwartete Textbefunde: erster Run HTTP 401 beim Login, ein Schritt fehlgeschlagen und einer übersprungen; späterer Lauf zwei Schritte erfolgreich. Keine unbelegte Code-Reparatur behaupten."
+        }
+    ],
+    "filters": {
+        "operator": "AND",
+        "base_object_alias": "axenox.GenAI.AI_TEST_CASE",
+        "conditions": [
+            {"expression": "APP", "comparator": "=", "value": "0x11efa2214f96c8b8a221025041000001", "object_alias": "axenox.GenAI.AI_TEST_CASE"}
+        ]
+    }
+}

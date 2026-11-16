@@ -1,0 +1,47 @@
+{
+    "object_alias": "axenox.GenAI.AI_AGENT_VERSION_SKILL",
+    "columns": [
+        {"name": "UID", "attribute_alias": "UID"},
+        {"name": "LABEL", "attribute_alias": "LABEL"},
+        {"name": "DESCRIPTION", "attribute_alias": "DESCRIPTION"},
+        {"name": "AI_AGENT_VERSION", "attribute_alias": "AI_AGENT_VERSION"},
+        {"name": "AI_SKILL", "attribute_alias": "AI_SKILL"}
+    ],
+    "rows": [
+        {
+            "UID": "0x2f03c2ed38fb47babf2f8192f2346ac1",
+            "LABEL": "Gherkin Test Assistant v1.0: Gherkin Feature Management",
+            "DESCRIPTION": "Original branch skill for authoring and validating feature files.",
+            "AI_AGENT_VERSION": "0xb421d93869a840ca8673c0eeaebc7956",
+            "AI_SKILL": "0x2e9f4a65d6804e4ca7a39c0407e08b61"
+        },
+        {
+            "UID": "0xeb08366daa95480fa6479c7b962dc97c",
+            "LABEL": "Gherkin Test Assistant v1.0: Gherkin Test Runner",
+            "DESCRIPTION": "Separate skill for discovery and scoped execution of existing features.",
+            "AI_AGENT_VERSION": "0xb421d93869a840ca8673c0eeaebc7956",
+            "AI_SKILL": "0x78f0f2cc268c4b6bb0a41356dbd26141"
+        },
+        {
+            "UID": "0x91739989bbf2480d9dea368b25a15e57",
+            "LABEL": "Gherkin Test Assistant v2.0: Gherkin Feature Management",
+            "DESCRIPTION": "Carries forward feature authoring and validation for the run-diagnosis version.",
+            "AI_AGENT_VERSION": "0x203a778a9cff4e71973da548772c5d06",
+            "AI_SKILL": "0x2e9f4a65d6804e4ca7a39c0407e08b61"
+        },
+        {
+            "UID": "0xfec003e9431d406a92e9beeceef7d6ac",
+            "LABEL": "Gherkin Test Assistant v2.0: Gherkin Test Runner",
+            "DESCRIPTION": "Carries forward scoped feature discovery and execution for the run-diagnosis version.",
+            "AI_AGENT_VERSION": "0x203a778a9cff4e71973da548772c5d06",
+            "AI_SKILL": "0x78f0f2cc268c4b6bb0a41356dbd26141"
+        }
+    ],
+    "filters": {
+        "operator": "AND",
+        "base_object_alias": "axenox.GenAI.AI_AGENT_VERSION_SKILL",
+        "conditions": [
+            {"expression": "AI_AGENT_VERSION__AI_AGENT__APP", "comparator": "=", "value": "0x11efa2214f96c8b8a221025041000001", "object_alias": "axenox.GenAI.AI_AGENT_VERSION_SKILL"}
+        ]
+    }
+}

@@ -3636,6 +3636,10 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      *  2) actual browser navigation
      *  3) UI5Browser re-initialization after navigation
      *
+    * Select the UI5 facade and page task explicitly: installations may use another default
+    * facade, whose login page cannot be initialized or automated as a UI5 application.
+    * The HTTP error checks remain active; navigation must render a real UI5 application.
+    *
      * @param string $pageAlias
      * @throws \Throwable
      */
@@ -3645,7 +3649,12 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         
         // Navigate to the page using Mink's path navigation
         $url = $pageAlias . '.html';
-        $this->visitPath('/' . $url);
+        $this->visitPath('/' . $url . '?' . http_build_query([
+            'tpl' => 'ui5',
+            'webapp' => $pageAlias,
+            'action' => 'exface.Core.ShowWidget',
+            'resource' => $pageAlias,
+        ], '', '&', PHP_QUERY_RFC3986));
         $this->logDebug("Debug - New page is loading: {$url}\n");
 
         // Initialize the UI5Browser with the current session and URL

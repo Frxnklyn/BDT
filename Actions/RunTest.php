@@ -667,20 +667,23 @@ class RunTest extends AbstractActionDeferred implements iCanBeCalledFromCLI
      * silently default to a guessed location and produce a green run that tested nothing - the
      * exact failure mode this framework exists to catch. So the option wins, the config is the
      * fallback, and an unresolved path throws.
+    *
+    * Relative paths use the installation root because web and AI callers can have a different
+    * working directory. Otherwise an installed Chrome binary fails the subsequent file check.
      */
     private function resolvePathParam(TaskInterface $task, string $optName, string $cfgKey, string $label): string
     {
         if ($task->hasParameter($optName)) {
             $val = $task->getParameter($optName);
             if ($val !== null && $val !== '') {
-                return (string) $val;
+                return FilePathDataType::makeAbsolute((string) $val, $this->getWorkbench()->getInstallationPath());
             }
         }
         $cfg = $this->getWorkbench()->getApp(self::APP_ALIAS)->getConfig();
         if ($cfg->hasOption($cfgKey)) {
             $fromCfg = $cfg->getOption($cfgKey);
             if ($fromCfg !== null && $fromCfg !== '') {
-                return (string) $fromCfg;
+                return FilePathDataType::makeAbsolute((string) $fromCfg, $this->getWorkbench()->getInstallationPath());
             }
         }
         throw new RuntimeException(

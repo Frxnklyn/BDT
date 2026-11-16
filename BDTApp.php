@@ -48,6 +48,7 @@ class BDTApp extends App
 
         // BDT AI agents and skills
         $aiInstaller = new AiAgentInstaller($this->getSelector());
+        $aiInstaller->addDataToReplace('axenox.GenAI.AI_TEST_CRITERION', 'CREATED_ON', 'AI_TEST_CASE__APP', [], '[#AI_TEST_CASE__AI_AGENT__ALIAS#]/06_AI_TEST_CRITERION.json');
         $installer->addInstaller($aiInstaller);
         
         return $installer;

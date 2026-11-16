@@ -1,0 +1,26 @@
+{
+    "object_alias": "axenox.GenAI.AI_AGENT",
+    "columns": [
+        {"name": "UID", "attribute_alias": "UID"},
+        {"name": "NAME", "attribute_alias": "NAME"},
+        {"name": "DESCRIPTION", "attribute_alias": "DESCRIPTION"},
+        {"name": "ALIAS", "attribute_alias": "ALIAS"},
+        {"name": "APP", "attribute_alias": "APP"}
+    ],
+    "rows": [
+        {
+            "UID": "0x9b0646ad8e674fe78350a1a26019db41",
+            "NAME": "Gherkin Test Assistant",
+            "DESCRIPTION": "Analyzes BDT run reports, authors and validates Gherkin, and discovers and executes existing BDT features. Includes direct, inferred and safety regression test cases.",
+            "ALIAS": "gherkin_test_assistant",
+            "APP": "0x11efa2214f96c8b8a221025041000001"
+        }
+    ],
+    "filters": {
+        "operator": "AND",
+        "base_object_alias": "axenox.GenAI.AI_AGENT",
+        "conditions": [
+            {"expression": "APP", "comparator": "=", "value": "0x11efa2214f96c8b8a221025041000001", "object_alias": "axenox.GenAI.AI_AGENT"}
+        ]
+    }
+}
