@@ -40,7 +40,7 @@ use exface\Core\Interfaces\WorkbenchInterface;
 use exface\Core\Widgets\ButtonGroup;
 use exface\Core\Widgets\DataToolbar;
 use exface\UI5Facade\Facades\UI5Facade;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use PHPUnit\Framework\AssertionFailedError;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Throwable;

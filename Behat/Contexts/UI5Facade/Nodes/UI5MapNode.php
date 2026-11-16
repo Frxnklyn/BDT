@@ -1,12 +1,10 @@
 <?php
 namespace axenox\BDT\Behat\Contexts\UI5Facade\Nodes;
 
-use axenox\bdt\Behat\DatabaseFormatter\SubstepResult;
-use axenox\BDT\Exceptions\FacadeNodeException;
 use axenox\BDT\Interfaces\TestResultInterface;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\Interfaces\Debug\LogBookInterface;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 
 class UI5MapNode extends UI5DataTableNode
 {

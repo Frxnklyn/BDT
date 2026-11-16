@@ -32,7 +32,7 @@ use exface\Core\Widgets\Data;
 use exface\Core\Widgets\DataColumn;
 use exface\Core\Widgets\DataTable;
 use exface\Core\Widgets\InputDate;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use PHPUnit\Framework\AssertionFailedError;
 
 /**

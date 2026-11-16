@@ -15,7 +15,7 @@ use exface\Core\Factories\UiPageFactory;
 use exface\Core\Interfaces\Debug\LogBookInterface;
 use exface\Core\Interfaces\Model\UiPageInterface;
 use exface\Core\Interfaces\WidgetInterface;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 
 class UI5PageNode implements FacadeNodeInterface
 {

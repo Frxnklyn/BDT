@@ -5,7 +5,7 @@ use axenox\BDT\Behat\Contexts\Elements\DateParsingTrait;
 use axenox\BDT\Interfaces\FacadeNodeInterface;
 use Behat\Mink\Element\NodeElement;
 use exface\Core\Exceptions\RuntimeException;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 
 /**
  *
