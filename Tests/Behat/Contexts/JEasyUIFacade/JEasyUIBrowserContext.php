@@ -4,7 +4,7 @@ namespace axenox\BDT\Tests\Behat\Contexts\JEasyUIFacade;
 use Behat\Behat\Context\Context;
 use Behat\MinkExtension\Context\MinkContext;
 use axenox\BDT\Behat\Contexts\JEasyUIFacade\LoginPage;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 
 
 /**

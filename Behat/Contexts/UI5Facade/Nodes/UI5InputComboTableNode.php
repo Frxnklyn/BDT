@@ -4,7 +4,7 @@ namespace axenox\BDT\Behat\Contexts\UI5Facade\Nodes;
 use axenox\BDT\Interfaces\FacadeNodeInterface;
 use Behat\Mink\Element\NodeElement;
 use exface\Core\Exceptions\RuntimeException;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 
 /**
  * @author Andrej Kabachnik

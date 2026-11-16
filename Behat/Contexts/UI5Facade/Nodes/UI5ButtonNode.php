@@ -4,7 +4,6 @@ namespace axenox\BDT\Behat\Contexts\UI5Facade\Nodes;
 
 use axenox\BDT\Behat\Contexts\UI5Facade\UI5FacadeNodeFactory;
 use axenox\bdt\Behat\DatabaseFormatter\SubstepResult;
-use axenox\BDT\DataTypes\StepStatusDataType;
 use axenox\BDT\Interfaces\FacadeNodeInterface;
 use axenox\BDT\Interfaces\TestResultInterface;
 use exface\Core\Actions\GoToPage;
@@ -12,10 +11,9 @@ use exface\Core\Exceptions\RuntimeException;
 use exface\Core\Facades\ConsoleFacade\CliOutputPrinter;
 use exface\Core\Interfaces\Actions\iShowDialog;
 use exface\Core\Interfaces\Debug\LogBookInterface;
-use exface\Core\Interfaces\WidgetInterface;
 use exface\Core\Interfaces\Widgets\iTriggerAction;
 use exface\Core\Widgets\Tile;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use Throwable;
 
 class UI5ButtonNode extends UI5AbstractNode implements FacadeNodeInterface

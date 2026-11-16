@@ -42,7 +42,7 @@ use exface\Core\Widgets\Filter;
 use exface\Core\Widgets\InputComboTable;
 use exface\Core\Widgets\InputSelect;
 use exface\Core\Widgets\RangeFilter;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use Throwable;
 
 /**

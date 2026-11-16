@@ -7,7 +7,7 @@ use axenox\BDT\Interfaces\TestResultInterface;
 use Behat\Mink\Element\NodeElement;
 use exface\Core\Exceptions\RuntimeException;
 use exface\Core\Interfaces\Debug\LogBookInterface;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 
 class UI5DialogNode extends UI5ContainerNode
 {

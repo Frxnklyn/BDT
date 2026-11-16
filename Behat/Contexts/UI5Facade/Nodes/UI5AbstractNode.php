@@ -30,7 +30,7 @@ use exface\Core\Interfaces\Debug\LogBookInterface;
 use exface\Core\Interfaces\Model\UiPageInterface;
 use exface\Core\Interfaces\WidgetInterface;
 use exface\Core\Widgets\AbstractWidget;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use Throwable;
 
 abstract class UI5AbstractNode implements FacadeNodeInterface
