@@ -23,6 +23,9 @@ use exface\Core\Exceptions\RuntimeException;
  * WHY THE FOLDER NAMES ARE CONSTANTS: they are the part callers actually pass, so leaving them as
  * inline literals would just move the drift one level down - and "chrome_profiles" alone is built
  * from three different places.
+ *
+ * Behat/BaseConfig.yml references the Reports, GherkinCache and ChromeUserData folders as literals
+ * because YAML cannot use PHP constants; BaseConfigPathsTest guards those paths against drift.
  */
 final class BdtPaths
 {
@@ -40,6 +43,21 @@ final class BdtPaths
     public const FOLDER_CHROME_PROFILES = 'chrome_profiles';
     public const FOLDER_LOCKS = 'locks';
     public const FOLDER_PORT_LOCKS = 'portlocks';
+
+    /**
+     * HTML test reports written by the Behat report formatter.
+     */
+    public const FOLDER_REPORTS = 'Reports';
+
+    /**
+     * Behat's parsed-feature cache.
+     */
+    public const FOLDER_GHERKIN_CACHE = 'GherkinCache';
+
+    /**
+     * Chrome profile for direct `vendor\bin\behat` runs.
+     */
+    public const FOLDER_CHROME_USER_DATA = 'ChromeUserData';
 
     /**
      * Builds a path relative to the installation root, e.g. "data\axenox\BDT\Logs\<run_uid>".

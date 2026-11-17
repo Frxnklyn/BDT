@@ -7,6 +7,7 @@ Run the commands below from the installation root, using the PHP CLI configured 
 1. **Install Chrome and configure PHP.** Follow [Setting up Chrome for testing](Setup/Setting_up_Chrome_for_testing.md)
    to install a portable Chrome and [Configure PHP](Setup/index.md#configure-php) for the CLI PHP settings.
    The account running the tests must be able to access Chrome and write BDT's data directories.
+   The application user must be able to write to `data/axenox/BDT`, including the Gherkin parser cache.
 
 2. **Configure BDT for this installation.** Create or edit
    `<INSTALLATION_ROOT>\config\axenox.BDT.config.json`, not the shipped package configuration.

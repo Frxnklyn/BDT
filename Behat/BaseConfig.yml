@@ -1,5 +1,10 @@
 # Default profile for Behat configuration
 default:
+ # Shared temp can belong to another OS user; BDT data belongs to the application user,
+ # like chrome_profiles, Logs and Screenshots.
+ gherkin:
+   cache: '%paths.base%/data/axenox/BDT/GherkinCache'
+
  # Formatters section defines how test results will be reported
  formatters:
    # Pretty formatter provides readable console output with colors and formatting
