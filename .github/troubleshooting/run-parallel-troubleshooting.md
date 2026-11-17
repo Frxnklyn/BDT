@@ -1,4 +1,4 @@
-# RunParallel — Troubleshooting Log
+# Troubleshooting BDT test runs
 
 Every fix to the `RunParallel` action is recorded here, written for a reader who has never seen the
 code. Newest entries at the top.
@@ -16,6 +16,7 @@ Each entry has four parts:
 
 | What you see | Go to |
 |---|---|
+| Behat stops at startup with `Cache path "/tmp/behat_gherkin_cache/<hash>" is not writeable` | [Shared temporary Gherkin cache is not writable](#shared-temporary-gherkin-cache-is-not-writable) |
 | A browser-setting change affects interactive runs but not scheduled lanes | [Generated browser configs drift](#generated-browser-configs-drift) |
 | `"User authentication" ... field "Modified on" is required` on a fresh environment | [Timestamping guard killed the INSERT](#timestamping-guard-killed-the-insert) |
 | `finished_on` is NULL, run log empty, no diagnostic trace | [Invisible close-out](#invisible-close-out) |
@@ -27,6 +28,45 @@ Each entry has four parts:
 | Chrome fails to launch, every login fails | [Cross-account profile reuse](#cross-account-profile-reuse) |
 | Real concurrency capped at ~2 lanes | [Xdebug serialized the fleet](#xdebug-serialized-the-fleet) |
 | Run duration in the DB is 1000× too small | [duration_ms holds seconds](#duration_ms-holds-seconds) |
+
+---
+
+## Shared temporary Gherkin cache is not writable
+
+**Symptom.** RunTest, RunParallel and direct Behat runs can fail before any scenarios start with:
+
+```text
+Cache path "/tmp/behat_gherkin_cache/<hash>" is not writeable. Check your filesystem permissions or disable Gherkin file cache.
+```
+
+`<hash>` is the version-specific subdirectory added by the Gherkin parser.
+
+**Root cause.** BDT did not configure the parser cache, so Behat used
+`sys_get_temp_dir() . '/behat_gherkin_cache'`. On Azure App Service this is a shared temporary folder.
+If another OS user, such as an administrator running Behat from a shell, created it first, the
+application user could not write to it. This is a startup filesystem failure, not a scenario failure.
+
+**Fix.** The shared BDT base configuration now sets `default.gherkin.cache` to
+`%paths.base%/data/axenox/BDT/GherkinCache`, alongside the application's other BDT data.
+The application user must have write access to `data/axenox/BDT`.
+
+`gherkin.cache` is a supported setting and `%paths.base%` is the directory of the top-level config,
+not the directory of an imported file. It is therefore the installation root for the root-level
+`behat_interactive_*.yml`, `behat_scheduled_lane*.yml` and `behat.yml` configs. A direct
+`vendor\bin\behat` invocation from the installation root discovers that `behat.yml` and uses the
+same base path. BDT's template, generated browser overrides and `Behat init` do not override the
+cache setting.
+
+Deploy the new BDT version. On an old BDT version, stop Behat runs, delete `/tmp/behat_gherkin_cache`
+once (using its owner or an administrator if necessary), then run Behat only as the application
+user so it recreates the cache with the correct owner. Never use `chmod 777`: cache files are read
+with `unserialize()`, so allowing other users to write them is unsafe.
+
+**How to recognize it again.** The error names `/tmp/behat_gherkin_cache` and occurs before
+scenarios start. If the error persists after deployment, check that the active config
+imports BDT's updated `Behat/BaseConfig.yml` and does not explicitly override `gherkin.cache`.
+If the error instead names `data/axenox/BDT/GherkinCache`, check the application user's write
+permissions there.
 
 ---
 
