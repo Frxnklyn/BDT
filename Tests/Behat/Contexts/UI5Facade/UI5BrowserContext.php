@@ -45,7 +45,7 @@ use exface\Core\Exceptions\RuntimeException;
 use exface\Core\Facades\ConsoleFacade;
 use exface\Core\Factories\FormulaFactory;
 use exface\Core\Interfaces\WorkbenchInterface;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 use Behat\Behat\Hook\Scope\AfterStepScope;
 use Behat\Behat\Hook\Scope\BeforeStepScope;
@@ -3584,6 +3584,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      * those columns, filters and buttons and reports any problem. Focus a table first (e.g.
      * "I look at table 1"). Use this when you want to spell out exactly what should be there;
      * use "It works as expected" when you want a fully automatic check.
+     * The failed result's exception is preserved so CDP detection can inspect causes below the assertion.
      *
      * Usage example:
      *
@@ -3608,9 +3609,8 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         $logbook->setIndentActive(1);
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->itWorksAsShown($fields, $logbook);
-        // Assert::fail() instead of assertNotTrue(): the latter exports values via PHPUnit's config registry, which is not initialized under Behat
         if ($result->isFailed()) {
-            Assert::fail('Widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+            Assert::fail('Widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'), $result->getException());
         }
     }
 
@@ -3622,6 +3622,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      * anything. This is the quickest way to broadly test a table. Focus a widget first (e.g.
      * "I look at table 1"). To check only filters or only buttons, use the dedicated steps below.
      * If the focused widget is a Page this will also check its child widgets work as expected.
+     * The failed result's exception is preserved so CDP detection can inspect causes below the assertion.
      *
      * Usage example:
      *
@@ -3642,7 +3643,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         $result = $node->checkWorksAsExpected($logbook);
         $title = $node->getCaption() === null ||  $node->getCaption() === "" ? $node->getWidgetType() : $node->getCaption();
         if ($result->isFailed()) {
-            Assert::fail('Widget "' . $title . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+            Assert::fail('Widget "' . $title . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'), $result->getException());
         }
     }
 
@@ -3653,6 +3654,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      * the buttons alone. Use it when you want to pin down filter behaviour on its own - for
      * example when the page's buttons are out of scope, or you are chasing a filter problem
      * without the slower full check. Focus a table first (e.g. "I look at table 1").
+     * The failed result's exception is preserved so CDP detection can inspect causes below the assertion.
      *
      * Usage example:
      *
@@ -3677,7 +3679,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->checkFiltersWorkAsExpected($logbook);
         if ($result->isFailed()) {
-            Assert::fail('Filters of widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+            Assert::fail('Filters of widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'), $result->getException());
         }
     }
 
@@ -3687,6 +3689,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      * A focused version of "It works as expected" that exercises just the buttons and leaves
      * the filters alone. Use it when the filters are covered elsewhere or are known to be flaky
      * on a given page, and you only want to green-light the buttons. Focus a table first (e.g.
+     * The failed result's exception is preserved so CDP detection can inspect causes below the assertion. Focus a table first (e.g.
      * "I look at table 1").
      *
      * This check is deliberately SHALLOW: a button that opens a dialog or navigates to a detail
@@ -3718,7 +3721,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->checkButtonsWorkAsExpectedOnly($logbook);
         if ($result->isFailed()) {
-            Assert::fail('Buttons of widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+            Assert::fail('Buttons of widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'), $result->getException());
         }
     }
 

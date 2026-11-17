@@ -123,6 +123,8 @@ and headless mode belong in `BROWSER.MANAGER_CONFIG`.
   **Log** attribute. See [How to read a BDT parallel run log](Parallel_Run/reading-the-run-log.md).
   A healthy machinery log does not mean every scenario passed.
 
+[Runtime assertion failures and developer conventions](Developer/Assertions.md)
+
 ## Open questions for installation operators
 
 - What is the approved password-rotation procedure for already provisioned base and lane users?

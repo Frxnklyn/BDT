@@ -2,6 +2,7 @@
 namespace axenox\BDT\Behat\Common\Traits;
 
 use axenox\BDT\Exceptions\ChromeHangException;
+use PHPUnit\Framework\AssertionFailedError;
 use WebSocket\Exception\ExceptionInterface as WebSocketExceptionInterface;
 
 /**
@@ -14,18 +15,49 @@ use WebSocket\Exception\ExceptionInterface as WebSocketExceptionInterface;
 trait CdpConnectionDetectorTrait
 {
     /**
-     * Returns true if the throwable (or any cause in its chain) indicates that the
-     * Chrome DevTools Protocol connection was lost or never established.
+     * Keeps transport retries and CDP escalation limited to genuine connection failures.
      *
-     * The full cause chain is walked because the CDP keyword is typically buried
-     * inside wrapper exceptions:
-     *   ErrorException("stream_socket_client()…")
-     *   → StreamException("Client could not connect…")
-     *     → ConnectionException("Could not open socket…")
-     *       → RuntimeException (top-level catch)
+     * Assertion messages and their wrappers can copy transport keywords from expected UI text.
+     * Only causes below the deepest assertion may establish a connection failure. Without
+     * assertions, a bare ChromeHangException remains a recovery concern, not a connection match.
+     * A typed Chrome hang below an assertion is likewise considered only by recovery mode.
      *
-     * Typed WebSocket failures must also be recognized: "Connection has unexpectedly closed"
-     * contains none of the transport keywords below and otherwise bypasses hook recovery entirely.
+     * @param \Throwable $e The throwable to inspect.
+     * @return bool True if the eligible causes indicate a lost or unavailable CDP connection.
+     */
+    private function isCdpConnectionError(\Throwable $e): bool
+    {
+        return $this->hasCdpCause($e, false);
+    }
+
+    /**
+     * Preserves hang recovery without letting assertion wrappers request a browser restart.
+     *
+     * A ChromeHangException anywhere in the cause chain requests recovery when no assertion exists. If an
+     * assertion is present, even that typed wrapper is ignored unless an eligible cause below
+     * the deepest assertion independently establishes a transport failure or Chrome hang.
+     *
+     * @param \Throwable $e The throwable caught by a hook or step.
+     * @return bool True if the eligible causes require Chrome recovery.
+     */
+    private function requiresChromeRestart(\Throwable $e): bool
+    {
+        return $this->hasCdpCause($e, true);
+    }
+
+    /**
+     * Applies assertion precedence once so connection detection and recovery share one cause boundary.
+     *
+     * Every assertion resets the accumulated verdict, discarding itself and all outer causes.
+     * Walking to the end is essential: returning on a transport match could miss a deeper
+     * assertion that invalidates it. After the last reset, only causes below the deepest
+     * assertion can contribute, including typed Chrome hangs without a transport keyword in
+     * recovery mode only. Connection mode still requires a WebSocket type or transport message.
+     *
+     * Connection detection uses WebSocket types and transport messages in the eligible segment.
+     * Recovery additionally accepts a ChromeHangException anywhere in that segment. This
+     * intentionally changes behavior: a wrapped Chrome hang without an assertion now requests
+     * recovery too, rather than depending on a transport keyword in its wrapper.
      *
      * Known patterns and their sources:
      *  - "WebSocket"               → dmore/chrome-mink-driver handshake failure
@@ -36,20 +68,29 @@ trait CdpConnectionDetectorTrait
      *  - "Could not connect"       → older dmore driver phrasing
      *  - "Server is closed"        → dmore driver: WebSocket server unreachable
      *  - "curl error"              → Guzzle curl transport failure
-     *  - "Server is closed"        → dmore driver: WebSocket server unreachable
-     *  - "curl error"              → Guzzle curl transport failure
+     *  - "Empty read" / "connection dead" → phrity/websocket FrameHandler: "Empty read; connection dead?" when the socket returns no data
      *  - "version information"     → dmore driver: Chrome not yet answering /json/version at
      *                                 connect time (transient at session start / after restart)
      *
-     * @param \Throwable $e The throwable to inspect.
-     * @return bool True if the throwable indicates a lost or unavailable CDP connection.
+     * @param \Throwable $e The thrown exception whose cause chain determines the result.
+     * @param bool $recoveryMode Includes typed Chrome hangs anywhere in the eligible segment.
+     * @return bool True if the eligible causes satisfy the requested detection mode.
      */
-    private function isCdpConnectionError(\Throwable $e): bool
+    private function hasCdpCause(\Throwable $e, bool $recoveryMode): bool
     {
+        $detected = false;
         $current = $e;
         while ($current !== null) {
+            if ($current instanceof AssertionFailedError) {
+                // A deeper assertion invalidates every match in the segment above it.
+                $detected = false;
+                $current = $current->getPrevious();
+                continue;
+            }
+
             $msg = $current->getMessage();
             if ($current instanceof WebSocketExceptionInterface
+                || ($recoveryMode && $current instanceof ChromeHangException)
                 || str_contains($msg, 'WebSocket')
                 || str_contains($msg, 'Connection refused')
                 || str_contains($msg, 'actively refused it')
@@ -69,26 +110,10 @@ trait CdpConnectionDetectorTrait
                 // routes it into the existing CDP retry/backoff instead.
                 || str_contains($msg, 'version information')
             ) {
-                return true;
+                $detected = true;
             }
             $current = $current->getPrevious();
         }
-        return false;
-    }
-
-    /**
-     * Decides whether a throwable means the current Chrome can no longer be used and must be restarted.
-     *
-     * WHY BOTH CHECKS: a lost connection is recognised by its message, because the driver wraps it in several
-     * exception classes. A ChromeHangException raised for a socket read timeout - Chrome still running but not
-     * answering - carries no connection keyword at all. The hooks only checked the message, so a hung Chrome
-     * never triggered a recovery there and the step hung until the outer process timeout.
-     *
-     * @param \Throwable $e The throwable caught by a hook or step
-     * @return bool TRUE if Chrome must be restarted
-     */
-    private function requiresChromeRestart(\Throwable $e): bool
-    {
-        return $e instanceof ChromeHangException || $this->isCdpConnectionError($e);
+        return $detected;
     }
 }
