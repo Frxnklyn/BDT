@@ -2,6 +2,7 @@
 
 namespace axenox\BDT\Behat\Contexts\UI5Facade;
 
+use axenox\BDT\Behat\Common\ErrorManager;
 use axenox\BDT\Behat\Common\Traits\CdpConnectionDetectorTrait;
 use axenox\BDT\Exceptions\AjaxException;
 use axenox\BDT\Exceptions\ChromeHangException;
@@ -9,9 +10,8 @@ use axenox\BDT\Exceptions\FetchApiException;
 use axenox\BDT\Exceptions\MessagePageException;
 use axenox\BDT\Exceptions\TracerException;
 use axenox\BDT\Exceptions\UIException;
-use axenox\BDT\Behat\Common\ErrorManager;
 use Behat\Mink\Session;
-use exface\Core\Exceptions\RuntimeException;
+use exface\Core\Interfaces\WorkbenchInterface;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 
@@ -59,6 +59,7 @@ class UI5ErrorDetector
      * Live Mink session this detector probes.
      */
     private Session $session;
+    private WorkbenchInterface $workbench;
 
     /**
      * Binds the detector to the session it must probe.
@@ -67,10 +68,16 @@ class UI5ErrorDetector
      * by the browser context: on a Chrome restart a fresh session is built and a
      * fresh detector is constructed alongside it, so the detector never holds a
      * stale session reference.
+     * The browser supplies its workbench so tracer housekeeping can warn without changing
+     * ErrorManager's original-failure log ID.
+     *
+     * @param Session $session Live session to probe.
+     * @param WorkbenchInterface $workbench Browser's workbench for warning diagnostics.
      */
-    public function __construct(Session $session)
+    public function __construct(Session $session, WorkbenchInterface $workbench)
     {
         $this->session = $session;
+        $this->workbench = $workbench;
     }
 
     /**
@@ -107,6 +114,7 @@ class UI5ErrorDetector
      * retries means Chrome is wedged, not merely busy, so it is escalated to a
      * ChromeHangException for the recovery path to restart Chrome rather than
      * silently returning and letting a broken browser corrupt later steps.
+     * Retries do not create monitor entries; the final exception is logged downstream.
      *
      * If Chrome is unreachable (crashed between steps), the low-level socket
      * throwable is detected via isCdpConnectionError() and re-thrown as a
@@ -144,15 +152,6 @@ class UI5ErrorDetector
                     if ($this->isConnectionTimeoutException($e)) {
                         if ($attempt < self::VALIDATE_RETRY_MAX) {
                             // Chrome is still busy with a heavy JS cycle - wait and retry.
-                            ErrorManager::getInstance()->logException(
-                                new RuntimeException(
-                                    "CDP connection timeout in assertNoErrors "
-                                    . "(attempt {$attempt}/" . self::VALIDATE_RETRY_MAX . "), "
-                                    . "retrying in " . self::VALIDATE_RETRY_DELAY_MS . " ms",
-                                    null,
-                                    $e
-                                )
-                            );
                             usleep(self::VALIDATE_RETRY_DELAY_MS * 1000);
                             continue;
                         }
@@ -160,7 +159,6 @@ class UI5ErrorDetector
                         // means Chrome is wedged, not merely busy - fail loudly so the
                         // recovery path can restart it, instead of silently returning and
                         // letting a broken browser corrupt subsequent steps.
-                        ErrorManager::getInstance()->logException($e);
                         throw new ChromeHangException(
                             'CDP connection timeout persisted after '
                             . self::VALIDATE_RETRY_MAX . ' attempts in assertNoErrors: '
@@ -194,8 +192,8 @@ class UI5ErrorDetector
      * clearing independent of which probe threw.
      *
      * Must never throw: it runs inside a finally block, so any failure (e.g. the
-     * browser is already gone) is swallowed and logged rather than masking the
-     * original exception.
+     * browser is already gone) is reported as a warning rather than masking the
+     * original exception or changing its log ID.
      */
     private function resetBrowserErrorBuffers(): void
     {
@@ -204,7 +202,7 @@ class UI5ErrorDetector
                 'if (window.exfXHRLog && window.exfXHRLog) { window.exfXHRLog.errors = [] }'
             );
         } catch (\Throwable $e) {
-            ErrorManager::getInstance()->logException($e);
+            ErrorManager::logWarning($this->workbench, 'Could not reset browser error buffers', $e);
         }
     }
 
@@ -421,7 +419,7 @@ JS
      * Enables the exfLauncher JS error tracer.
      *
      * Why guarded: enabling the tracer must never abort a step. If exfLauncher is
-     * not yet present (e.g. on an unexpected page) the failure is logged and
+     * not yet present (e.g. on an unexpected page) the failure is warned without changing the last log ID and
      * detection continues rather than crashing the caller.
      */
     public function enableJsErrorTracer(): void
@@ -429,7 +427,7 @@ JS
         try {
             $this->getSession()->evaluateScript('window.exfLauncher.enableJsTracing();');
         } catch (\Throwable $e) {
-            ErrorManager::getInstance()->logException($e);
+            ErrorManager::logWarning($this->workbench, 'Could not enable JS error tracing', $e);
         }
     }
 
@@ -438,15 +436,15 @@ JS
      *
      * Why guarded and why only on the error path: clearing the tracer prevents a
      * JS error from being re-detected on the next step. It is called after an
-     * error is surfaced (not on a clean pass), and any failure to clear is logged
-     * rather than thrown so it cannot mask the real error propagating out.
+     * error is surfaced (not on a clean pass), and any failure to clear is warned
+     * without changing the last log ID so it cannot mask the real error propagating out.
      */
     private function clearJsErrorTracer(): void
     {
         try {
             $this->getSession()->evaluateScript('window.exfLauncher.resetJsErrorLogs();');
         } catch (\Throwable $e) {
-            ErrorManager::getInstance()->logException($e);
+            ErrorManager::logWarning($this->workbench, 'Could not clear JS error tracing', $e);
         }
     }
 
@@ -455,7 +453,7 @@ JS
      *
      * Why filtered to error level: the tracer records all log levels, but only
      * error-level entries should fail a step. Returns an empty array on failure
-     * so a tracer read problem never aborts detection.
+     * after warning without changing the last log ID so a tracer read problem never aborts detection.
      */
     private function getJsErrorsFromTracer(): array
     {
@@ -466,7 +464,7 @@ JS
                     .filter(e => e.level === 'error');
             ");
         } catch (\Throwable $e) {
-            ErrorManager::getInstance()->logException($e);
+            ErrorManager::logWarning($this->workbench, 'Could not read JS error tracing', $e);
             return [];
         }
     }

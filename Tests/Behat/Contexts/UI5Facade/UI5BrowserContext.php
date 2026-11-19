@@ -260,11 +260,14 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
     }
 
     /**
-     * Logs failed steps to the workbench log and attempts Chrome recovery if the
-     * failure was caused by a lost CDP connection.
+     * Collects and logs failed steps, printing their log ID and attempting CDP recovery when needed.
      *
      * Must never throw — any uncaught exception from an AfterStep hook causes Behat
      * to exit with code 255, killing the entire test run.
+     * ErrorManager owns wrapping and ID tracking so reports only reference successful log writes.
+     * A non-empty returned ID is printed so CLI users can locate a real failure entry in the monitor.
+     * A failed monitor write is caught locally so the original error and logging failure are still
+     * collected with a null log ID instead of disappearing at the outer hook boundary.
      *
      * @AfterStep
      */
@@ -283,34 +286,38 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
             }
 
             if ($exception !== null) {
-                $wrappedException = new RuntimeException(
-                    $exception->getMessage(),
-                    null,
-                    $exception
-                );
+                $exceptionToLog = $exception;
             } elseif ($result instanceof UndefinedStepResult) {
-                $wrappedException = new RuntimeException('Step is not defined: ' . $scope->getStep()->getText());
+                $exceptionToLog = new RuntimeException('Step is not defined: ' . $scope->getStep()->getText());
             } else {
-                $wrappedException = new RuntimeException('Step failed without exception details');
+                $exceptionToLog = new RuntimeException('Step failed without exception details');
             }
 
-            $this->getWorkbench()->getLogger()->logException($wrappedException);
-            ErrorManager::getInstance()->setLastLogId($wrappedException->getId());
+            $logId = null;
+            $loggingError = null;
+            try {
+                $logId = ErrorManager::getInstance()->logException($exceptionToLog, $this->getWorkbench());
+            } catch (\Throwable $logError) {
+                // Failure-handling boundary: an unavailable monitor must not discard the step's error.
+                $loggingError = $logError;
+            }
 
-            // Only populate exception details when an actual exception is available —
-            // UndefinedStepResult and bare failures carry no exception object.
-            if ($exception !== null) {
+            // Bare failures need a collected record too when the monitor could not retain them.
+            if ($exception !== null || $loggingError !== null) {
                 ErrorManager::getInstance()->addError([
                     'type'    => 'BehatException',
-                    'message' => $exception->getMessage(),
-                    'status'  => $exception->getCode(),
-                    'stack'   => $exception->getTraceAsString(),
+                    'message' => $exceptionToLog->getMessage()
+                        . ($loggingError !== null ? "\nLogger failure: " . $loggingError->getMessage() : ''),
+                    'status'  => $exceptionToLog->getCode(),
+                    'stack'   => $exceptionToLog->getTraceAsString(),
+                    'logId'   => $logId,
                 ], 'AfterStep');
             }
 
-            echo "LogID: " . $wrappedException->getId() . "\n";
-            // Display LogID for debugging purposes 
-            $this->logDebug("LogID: " . $wrappedException->getId() . "\n");
+            if ($logId !== null && $logId !== '') {
+                echo "LogID: " . $logId . "\n";
+                $this->logDebug("LogID: " . $logId . "\n");
+            }
 
             // If the step failed due to a lost CDP connection, attempt to recover
             // Chrome so the next step in this scenario can continue on a live browser.
@@ -323,7 +330,7 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
                 );
             }
         } catch (\Throwable $e) {
-            // Logging itself failed (e.g. DB unreachable). Swallow so Behat can continue.
+            // Hook boundary: unexpected collection or recovery failures must not terminate Behat.
             $this->logDebug('logFailedStep internal error: ' . $e->getMessage());
         }
     }
