@@ -28,9 +28,8 @@ content verification, which must not wrap expectation failures as infrastructure
 errors. Failure construction uses neither a value exporter nor runner state.
 PHPUnit unit tests continue using PHPUnit's assertions under its runner.
 
-The BDT exception intentionally does not implement exface `ExceptionInterface`.
-The RuntimeException wrapper in the AfterStep hook that logs failed steps assigns
-the Log-ID, rather than the assertion exception itself.
+For failure collection, monitor logging and step references, see
+[Error handling and log IDs](Error_handling_and_log_ids.md).
 
 PHPUnit marks `AssertionFailedError` as internal and excludes it from its
 backward-compatibility promise. BDT's dependency constraint supports

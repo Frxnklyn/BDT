@@ -1180,6 +1180,11 @@ JS);
         return $this;
     }
 
+    /**
+     * Clicks a toolbar button by its translated caption.
+     *
+     * Failures reach the substep boundary unchanged so it owns failure reporting once.
+     */
     protected function clickButtonByCaption(string $caption): void
     {
         $buttonCaption = $this->getBrowser()
@@ -1199,12 +1204,8 @@ JS);
             'Button',
             0
         );
-        try {
-            $button->click();
-            $this->getBrowser()->clearWidgetHighlights();
-        } catch (Throwable $e) {
-            throw $e;
-        }
+        $button->click();
+        $this->getBrowser()->clearWidgetHighlights();
     }
 
     protected function checkButtonsWorkAsExpected(iHaveButtons $dataWidget, LogBookInterface $logbook): TestResultInterface

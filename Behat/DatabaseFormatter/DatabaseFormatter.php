@@ -653,6 +653,7 @@ class DatabaseFormatter implements Formatter, TestRunObserverInterface
             return;
         }
         static::$stepLogbooks = [];
+        ErrorManager::getInstance()->setLastLogId(null);
         // Reset so that onAfterStep can detect a failed DB record creation
         $this->stepDataSheet = null;
         // A new step starts with no evidence of its own. This is the only place where dropping the

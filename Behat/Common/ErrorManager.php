@@ -2,10 +2,14 @@
 namespace axenox\BDT\Behat\Common;
 
 use exface\Core\Exceptions\RuntimeException;
+use exface\Core\DataTypes\StringDataType;
+use exface\Core\Interfaces\WorkbenchInterface;
+use WeakMap;
 
 /**
- * ErrorManager class for managing and tracking errors in UI5 tests
- * Implement to ensure a single error manager instance
+ * Collects UI5 test errors and correlates them with persisted log entries.
+ *
+ * A process-wide instance lets hooks and substeps share diagnostics without owning each other.
  */
 class ErrorManager
 {
@@ -14,26 +18,42 @@ class ErrorManager
     private float $lastErrorTime = 0;
 
     private ?string $lastLogId = null;
+    /** @var WeakMap<\Throwable, string> */
+    private WeakMap $loggedExceptions;
     /**
-     * Set the last log ID for error tracking
+     * Sets the current failure's log ID.
+     *
+     * Frames must be able to restore their own ID after best-effort cleanup.
      */
     public function setLastLogId(?string $logId): void
     {
         $this->lastLogId = $logId;
     }
     
+    /**
+     * Returns the current failure's log ID.
+     *
+     * Step persistence uses this reference to link the recorded outcome to its original cause.
+     */
     public function getLastLogId(): ?string
     {
         return $this->lastLogId;
     }
     
+    /**
+     * Initializes the logged-exception registry.
+     *
+     * Weak references avoid retaining every exception and its trace for the whole run.
+     */
     private function __construct()
     {
+        $this->loggedExceptions = new WeakMap();
     }
 
     /**
-     * Returns the instance of ErrorManager
-     * Creates a new instance if none exists yet
+     * Returns the shared ErrorManager instance, creating it when needed.
+     *
+     * Hooks and substeps need one error collection and log-reference state within a process.
      */
     public static function getInstance(): ErrorManager
     {
@@ -44,8 +64,9 @@ class ErrorManager
     }
 
     /**
-     * Adds a new error to the error collection
-     * Prevents duplicate errors within a 1-second timeframe
+     * Adds an error to the collection.
+     *
+     * Deduplication within one second prevents repeated probes from flooding the report.
      */
     public function addError(array $error, string $source): void
     {
@@ -64,7 +85,9 @@ class ErrorManager
     }
 
     /**
-     * Standardizes error format by adding missing fields and metadata
+     * Normalizes error fields and adds collection metadata.
+     *
+     * Comparable records support deduplication while retaining log IDs needed by formatters.
      */
     private function standardizeError(array $error, string $source): array
     {
@@ -75,14 +98,16 @@ class ErrorManager
             'url' => $error['url'] ?? '',
             'response' => $error['response'] ?? '',
             'source' => $source,
+            'logId' => $error['logId'] ?? null,
             'timestamp' => microtime(true),
             'trace' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ];
     }
 
     /**
-     * Generates a unique hash for an error to identify duplicates
-     * Removes dynamic URL parameters to improve matching
+     * Builds a hash identifying equivalent errors.
+     *
+     * Ignoring dynamic URL parameters lets repeated probes match the same failure.
      */
     private function generateErrorHash(array $error): string
     {
@@ -98,28 +123,37 @@ class ErrorManager
         return md5($hashContent);
     }
     /**
-     * Returns all collected errors
+     * Returns all collected errors.
+     *
+     * Formatters need the collection without owning the probes that populated it.
      */
     public function getErrors(): array
     {
         return $this->errors;
-    }  /**
-       * Checks if any errors have been collected
-       */
+    }
 
+    /**
+     * Reports whether errors have been collected.
+     *
+     * Callers use this to avoid inventing a fallback error when diagnostic evidence already exists.
+     */
     public function hasErrors(): bool
     {
         return !empty($this->errors);
     }
     /**
-     * Returns the first error in the collection or null if empty
+     * Returns the first collected error, or null.
+     *
+     * Callers reporting one primary failure need a stable entry point into the collection.
      */
     public function getFirstError(): ?array
     {
         return reset($this->errors) ?: null;
     }
     /**
-     * Clears all collected errors and resets the error tracking state
+     * Clears collected errors and their deduplication timer.
+     *
+     * New browser work must not reuse stale diagnostics; persisted log references remain independent.
      */
     public function clearErrors(): void
     {
@@ -129,7 +163,9 @@ class ErrorManager
 
 
     /**
-     * Formats an error into a readable string representation
+     * Formats a collected error as readable text.
+     *
+     * Keeping context and its optional log reference together lets readers locate the original cause.
      */
     public function formatErrorMessage(array $error): string
     {
@@ -139,6 +175,7 @@ class ErrorManager
         }
             
         $message = "Source: " . ($error['source'] ?? 'Unknown') . "\n";
+        $message .= $this->formatLogId($error['logId'] ?? null);
         $message .= "Message: " . ($error['message'] ?? 'No message available') . "\n";
         $message .= "URL: " . ($error['url'] ?? 'N/A') . "\n";
         $message .= "Type: " . ($error['type'] ?? 'N/A') . "\n";
@@ -152,11 +189,14 @@ class ErrorManager
     }
 
     /**
-     * Formats a Behat exception into a readable string representation
+     * Formats a Behat exception and its optional trace.
+     *
+     * Behat failures need their cause and log reference alongside diagnostic traces.
      */
     public function formatBehatExceptionMessage(array $error): string
     {
         $message = "Source: " . ($error['source'] ?? 'Unknown') . "\n";
+        $message .= $this->formatLogId($error['logId'] ?? null);
         $message .= "Message: " . ($error['message'] ?? 'No message available') . "\n";
         $message .= "Type: " . ($error['type'] ?? 'N/A') . "\n";
         $message .= "Status: " . ($error['status'] ?? 'N/A') . "\n";
@@ -169,72 +209,101 @@ class ErrorManager
     }
 
     /**
-     *  Logs an exception with additional context and outputs the associated LogID.
+     * Formats an optional log-reference line.
      *
-     *  This function is intended to be used in any part of the application where exceptions need to be tracked
-     *  and correlated across different systems or log files. It wraps the given exception in a RuntimeException
-     *  (to ensure consistent handling and LogID generation), stores it in the ErrorManager's error list,
-     *  and optionally logs it to an external logger (e.g. the workbench logger).
+     * Both text formatters must use the same representation without inventing missing IDs.
      *
-     *  Usage:
-     *    try {
-     *        // risky operation
-     *    } catch (\Throwable $e) {
-     *        ErrorManager::getInstance()->logExceptionWithId($e, 'SomeSource', $this->workbench);
-     *    }
-     * 
-     * @param \Throwable $e
-     * @param string $source
-     * @param $workbench
-     * @throws \Throwable
+     * @param string|null $logId ID of a persisted log entry, if available.
+     * @return string The log-reference line, or no text when no ID is available.
      */
-    public function logExceptionWithId(\Throwable $e, string $source = 'Unknown', $workbench = null)
+    private function formatLogId(?string $logId): string
     {
-        $this->logException($e, $workbench);
-
-        $this->addError([
-            'type'    => 'Exception',
-            'message' => $e->getMessage(),
-            'status'  => $e->getCode(),
-            'stack'   => $e->getTraceAsString(),
-            'logId'   => $this->getLastLogId(),
-        ], $source);
-        
-        throw $e;
+        return $logId !== null && $logId !== '' ? "Log ID: " . $logId . "\n" : '';
     }
 
     /**
-     *  Logs an exception with additional context and outputs the associated LogID.
+     * Builds a single-line markdown error with an optional persisted log ID.
      *
-     *  Usage:
-     *    try {
-     *        // risky operation
-     *    } catch (\Throwable $e) {
-     *        ErrorManager::getInstance()->logExceptionWithId($e, 'SomeSource', $this->workbench);
-     *    }
+     * WHY NOT CliOutputPrinter: it takes the ID from the exception even when it was never logged.
+     * The caller supplies the persisted ID instead, and line breaks must not split a list item.
      *
-     * @param \Throwable $e
-     * @param $workbench
+     * @param string $message Original failure message.
+     * @param string|null $logId ID of the successfully written log entry, if available.
+     * @return string A single-line markdown error with an optional log reference.
      */
-    public function logException(\Throwable $e, $workbench = null): void
+    public static function buildErrorLine(string $message, ?string $logId = null): string
     {
+        return '**ERROR:** ' . trim(StringDataType::replaceLineBreaks($message, ' '))
+            . ($logId !== null && $logId !== '' ? ' (Log-ID: ' . $logId . ')' : '');
+    }
+
+    /**
+     * Writes a housekeeping warning without changing the last log ID.
+     *
+     * The monitor can itself fail during cleanup. STDERR is the last-resort diagnostic boundary
+     * so that a failed warning write cannot replace the exception currently being handled.
+     *
+     * @param WorkbenchInterface $workbench Workbench owning the warning logger.
+     * @param string $message Housekeeping operation that failed.
+     * @param \Throwable $e Failure to include in the warning.
+     * @return void
+     */
+    public static function logWarning(WorkbenchInterface $workbench, string $message, \Throwable $e): void
+    {
+        $message = 'BDT: ' . $message . ': ' . $e->getMessage();
+        try {
+            $workbench->getLogger()->warning($message, ['exception' => $e]);
+        } catch (\Throwable $loggingError) {
+            // Diagnostic boundary: even a broken monitor must not abort browser error handling.
+            fwrite(STDERR, $message . ' (warning logging failed: ' . $loggingError->getMessage() . ')' . PHP_EOL);
+        }
+    }
+
+    /**
+     * Logs an exception once and returns its persisted log ID.
+     *
+     * Only a successful logger write replaces the previous ID; local-only callers leave it untouched.
+     * Logger failures propagate so callers can report them at their own failure-handling boundary.
+     * Repeated logging of the same object reuses its persisted ID: page checks can rethrow a substep
+     * failure into the AfterStep hook, which must not create another monitor entry for it.
+     *
+     * Usage:
+     *     $logId = ErrorManager::getInstance()->logException($exception, $workbench);
+     *
+     * @param \Throwable $e Original failure to wrap and log.
+     * @param WorkbenchInterface|null $workbench Optional workbench owning the logger.
+     * @return string|null The new or previously persisted log ID, or null without a logger.
+     * @throws \Throwable If the logger cannot write the exception.
+     */
+    public function logException(\Throwable $e, ?WorkbenchInterface $workbench = null): ?string
+    {
+        if ($workbench === null) {
+            return null;
+        }
+        if (isset($this->loggedExceptions[$e])) {
+            $logId = $this->loggedExceptions[$e];
+            $this->setLastLogId($logId);
+            return $logId;
+        }
+
         $wrappedException = new RuntimeException(
             $e->getMessage(),
             null,
             $e
         );
 
-        $logId = method_exists($wrappedException, 'getId') ? $wrappedException->getId() : null;
-
-        if ($workbench && method_exists($workbench, 'getLogger')) {
-            $workbench->getLogger()->logException($wrappedException);
-        }
-
-        if ($logId) {
-            $this->setLastLogId($logId);
-        }
+        $workbench->getLogger()->logException($wrappedException);
+        $logId = $wrappedException->getId();
+        $this->loggedExceptions[$e] = $logId;
+        $this->setLastLogId($logId);
+        return $logId;
     }
     
+    /**
+     * Removes an exact error record from the collection.
+     *
+     * Consumers can discard handled diagnostics without clearing unrelated failures.
+     */
     public function dropError(array $e): void
     {
         $key = array_search($e, $this->errors, true);

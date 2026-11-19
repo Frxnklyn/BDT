@@ -263,6 +263,12 @@ class BehatFormatter implements Formatter
         $this->exceptionListener = new GlobalExceptionListener($exceptionPresenter);
     }
 
+    /**
+     * Flushes the report at shutdown.
+     *
+     * Rendering failures must not mask the test outcome; STDERR stays available when central
+     * logging is unsafe during destruction.
+     */
     public function __destruct()
     {
         if ($this->isDryRun) {
@@ -279,9 +285,9 @@ class BehatFormatter implements Formatter
             $print = $this->renderer->renderAfterExercise($this);
             $this->printer->writeln($print);
         } catch (\Throwable $e) {
-            // A destructor must never throw during shutdown; log and swallow so the:Zsa
+            // A destructor must never throw during shutdown; report to STDERR so the
             // real underlying error stays visible instead of being masked.
-            ErrorManager::getInstance()->logException($e);
+            fwrite(STDERR, 'BDT report finalization failed: ' . $e->getMessage() . PHP_EOL);
         }
     }
     

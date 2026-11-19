@@ -63,14 +63,17 @@ class UI5WaitManager
     ];
 
     /**
-     * Constructor - initializes the manager with  session
+     * Initializes waiting with a session and the browser's error detector.
+     *
+     * Reusing the detector prevents waiting from creating a separate error-detection instance.
      *
      * @param Session $session session instance
+     * @param UI5ErrorDetector $errorDetector Detector owned by the browser for this session.
      */
-    public function __construct(Session $session)
+    public function __construct(Session $session, UI5ErrorDetector $errorDetector)
     {
         $this->session = $session;
-        $this->errorDetector = new UI5ErrorDetector($session);
+        $this->errorDetector = $errorDetector;
     }
 
     /**
