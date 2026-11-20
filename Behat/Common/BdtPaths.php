@@ -23,6 +23,9 @@ use exface\Core\Exceptions\RuntimeException;
  * WHY THE FOLDER NAMES ARE CONSTANTS: they are the part callers actually pass, so leaving them as
  * inline literals would just move the drift one level down - and "chrome_profiles" alone is built
  * from three different places.
+ *
+ * Behat/BaseConfig.yml references the Reports, GherkinCache and ChromeUserData folders as literals
+ * because YAML cannot use PHP constants; BaseConfigPathsTest guards those paths against drift.
  */
 final class BdtPaths
 {
@@ -42,10 +45,25 @@ final class BdtPaths
     public const FOLDER_PORT_LOCKS = 'portlocks';
 
     /**
+     * HTML test reports written by the Behat report formatter.
+     */
+    public const FOLDER_REPORTS = 'Reports';
+
+    /**
+     * Behat's parsed-feature cache.
+     */
+    public const FOLDER_GHERKIN_CACHE = 'GherkinCache';
+
+    /**
+     * Chrome profile for direct `vendor\bin\behat` runs.
+     */
+    public const FOLDER_CHROME_USER_DATA = 'ChromeUserData';
+
+    /**
      * Builds a path relative to the installation root, e.g. "data\axenox\BDT\Logs\<run_uid>".
      *
      * WHY A RELATIVE VARIANT IS NEEDED AT ALL: two consumers must NOT receive an absolute path.
-     * The interactive behat config's user_data_dir is resolved by ChromeManager::start(), which
+     * The interactive behat config's user_data_dir is resolved by the local browser manager, which
      * prepends getcwd() - an absolute value there becomes a broken "C:\...\C:\..." and Chrome
      * silently falls back to the real user profile. The screenshot path is stored in the database
      * and read back against whatever installation serves the UI, so it must not carry this

@@ -30,7 +30,7 @@ use exface\Core\Interfaces\Debug\LogBookInterface;
 use exface\Core\Interfaces\Model\UiPageInterface;
 use exface\Core\Interfaces\WidgetInterface;
 use exface\Core\Widgets\AbstractWidget;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use Throwable;
 
 abstract class UI5AbstractNode implements FacadeNodeInterface
@@ -910,16 +910,19 @@ JS
      *
      * The $callable will receive the default result object as argument and may modify it or return
      * a new one. If the callable does not return anything, it will not fail - the default result
-     * will be used. If the callable throws an exception, a failed result will be created automatically
+     * will be used. A thrown exception must replace that default with FAILED before any best-effort
+     * handling: otherwise a dead browser can interrupt capture and leave false passing coverage.
      *
      *  Execution order on failure:
-     *    1. Exception is caught.
+     *    1. The result is fixed as FAILED for the original exception before logging or browser handling.
+     *       The exception is logged once and its persisted ID is included in the first ERROR line.
+     *       A failed monitor write becomes a warning instead of replacing the original failure.
      *    2. Screenshot is captured — the browser is still in the failed state,
      *       so the screenshot reflects exactly what went wrong (e.g. an error dialog is still visible).
-     *    3. If the exception is a UI5DialogException, the error dialog is dismissed
+     *    3. If the exception is a UIException or AjaxException, the error dialog is dismissed
      *       so the DOM is unblocked for subsequent interactions.
      *    4. The optional $onFailure callback is invoked — use this for cleanup that must
-     *       happen after the screenshot but before the exception propagates (e.g. back-navigation
+     *       happen after the screenshot but before the failed result is reported (e.g. back-navigation
      *       after a tile click so the browser is not left on the wrong page).
      *    5. The node is reset so subsequent steps find it in the same state as if no error occurred.
      *
@@ -927,13 +930,15 @@ JS
      *  cleanup logic does not interfere with the screenshot: anything inside $fn that runs
      *  after the failure point would change the browser state before the screenshot is taken.
      *
-     *  All failure-handling steps are wrapped in a secondary try/catch. If Chrome has
+     *  Browser failure-handling steps are wrapped in secondary try/catch blocks. If Chrome has
      *  crashed, any of those steps can throw a secondary CDP exception (e.g. "Server is closed",
      *  "Unable to connect to tcp://..."). Without the secondary guard that exception would escape
      *  runAsSubstep, replace the original error in the caller's error report, and surface as a
      *  confusing socket error instead of the real test failure. The secondary exception is logged
      *  to ErrorManager and the logbook and then swallowed so that $substepResult always carries
-     *  the original failure.
+     *  the original failure. After all failure handling, the frame restores its original log ID
+     *  before dispatching the completed event, including when helpers logged without throwing.
+     *  Each frame also clears any inner frame's ID when its own logging attempt fails.
      *
      * @param callable $callable The substep logic to execute.
      * @param string $title Human-readable substep title used in the logbook and events.
@@ -943,7 +948,7 @@ JS
      *                                     and dialog dismiss. Exceptions thrown inside this
      *                                     callback are silently swallowed to preserve the
      *                                     original error.
-    * @param SubstepCoverageIdentity|null $coverageIdentity Eager registry identity for coverage work.
+     * @param SubstepCoverageIdentity|null $coverageIdentity Eager registry identity for coverage work.
      * @return SubstepResult
      */
     public function runAsSubstep(
@@ -973,6 +978,7 @@ JS
             }
         }
 
+        $returnValue = null;
         try {
             $substepResult = SubstepResult::createPassed($logbook);
             $substepResult->setTitle($title);
@@ -988,22 +994,28 @@ JS
                     : $returnValue;
             }
         } catch (Throwable $e) {
-            $logbook?->addLine('**ERROR:** ' . $e->getMessage());
+            $substepResult = SubstepResult::createFailed($e, $logbook);
+            $logId = null;
+            $loggingError = null;
+            try {
+                $logId = ErrorManager::getInstance()->logException($e, $this->getBrowser()->getWorkbench());
+            } catch (Throwable $logError) {
+                // Failure-handling boundary: a full monitor filegroup must not hide the original error.
+                $loggingError = $logError;
+            }
+            ErrorManager::getInstance()->setLastLogId($logId);
+            $logbook?->addLine(ErrorManager::buildErrorLine($e->getMessage(), $logId));
+            if ($loggingError !== null) {
+                $logbook?->addLine('**WARNING:** Could not log the original exception: ' . $loggingError->getMessage());
+            }
 
-            // If the original exception is (or wraps) a CDP connection failure, convert it
-            // to ChromeHangException so that callers such as UI5ContainerNode can trigger
-            // the Chrome recovery path. We still attempt a screenshot and log entry first
-            // (both best-effort — Chrome may be gone), then re-throw so the SubstepResult
-            // is never silently swallowed when a restart is needed.
+            // A CDP connection failure needs best-effort capture and recovery without replacing
+            // the original failure. The exception is retained in the failed result, not rethrown here.
             $isCdpCrash = $this->isCdpConnectionError($e);
             if ($isCdpCrash) {
-                // Best-effort: screenshot and log may fail if Chrome is already dead.
+                // Best-effort: capture may fail if Chrome is already dead.
                 try {
                     $this->getBrowser()->captureScreenshot($logbook);
-                } catch (Throwable $ignored) {
-                }
-                try {
-                    ErrorManager::getInstance()->logException($e, $this->getBrowser()->getWorkbench());
                 } catch (Throwable $ignored) {
                 }
                 if ($e instanceof ChromeHangException) {
@@ -1026,8 +1038,6 @@ JS
             // never replaces the original exception $e in the caller's error report.
             try {
                 $this->getBrowser()->captureScreenshot($logbook);
-                $substepResult = SubstepResult::createFailed($e, $logbook);
-                ErrorManager::getInstance()->logException($e, $this->getBrowser()->getWorkbench());
                 if ($e instanceof UIException || $e instanceof AjaxException) {
                     $this->getBrowser()->dismissErrorDialogIfPresent();
                 }
@@ -1061,12 +1071,10 @@ JS
                 } catch (Throwable $ignored) {
                 }
                 $logbook?->addLine('**WARNING:** Secondary error during failure handling (Chrome may have crashed): ' . $secondaryError->getMessage());
-                // Guarantee $substepResult is always assigned even if captureScreenshot()
-                // threw before line "SubstepResult::createFailed($e, $logbook)" was reached.
-                if (!isset($substepResult)) {
-                    $substepResult = SubstepResult::createFailed($e, $logbook);
-                }
+                // The original failure was fixed before handling began; secondary errors cannot change it.
             }
+            // Helpers and callbacks can log without throwing; report this frame's failure ID, not theirs.
+            ErrorManager::getInstance()->setLastLogId($logId);
         }
         // The name belongs to this frame, not to the result object that bubbled up from inside it.
         // WHY THE RESULT'S TITLE IS NO LONGER TRUSTED: runAsSubstep() adopts whatever its callback

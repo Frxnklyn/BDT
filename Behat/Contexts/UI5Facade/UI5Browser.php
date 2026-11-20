@@ -23,7 +23,6 @@ use Behat\Mink\Session;
 use exface\Core\Actions\Login;
 use exface\Core\CommonLogic\Security\AuthenticationToken\MetamodelUsernamePasswordAuthToken;
 use exface\Core\CommonLogic\Security\Authenticators\MetamodelAuthenticator;
-use exface\Core\CommonLogic\Workbench;
 use exface\Core\DataTypes\ComparatorDataType;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\Exceptions\InvalidArgumentException;
@@ -40,7 +39,7 @@ use exface\Core\Interfaces\WorkbenchInterface;
 use exface\Core\Widgets\ButtonGroup;
 use exface\Core\Widgets\DataToolbar;
 use exface\UI5Facade\Facades\UI5Facade;
-use PHPUnit\Framework\Assert;
+use axenox\BDT\Behat\Common\Assert;
 use PHPUnit\Framework\AssertionFailedError;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Throwable;
@@ -66,7 +65,7 @@ class UI5Browser
     private const USER_PROVISIONING_LOCK_TIMEOUT_SECONDS = 60;
     private EventDispatcherInterface $eventDispatcher;
     private Session $session;
-    private Workbench $workbench;
+    private WorkbenchInterface $workbench;
     private ?UI5Facade $facade = null;
     private UI5WaitManager $waitManager;
     private UI5ErrorDetector $errorDetector;
@@ -129,11 +128,16 @@ class UI5Browser
     private const TAB_OVERFLOW_LIST_TIMEOUT_MS = 5000;
 
     /**
-     * Constructor - initializes the UI5Browser with necessary dependencies
+     * Initializes the browser and its shared error-detection and waiting helpers.
+     *
+     * Helpers use one session and workbench so detector warnings do not alter failure IDs.
+     * One detector is shared with the wait manager so both entry points use the same instance.
      *
      * @param WorkbenchInterface $workbench The application workbench
-     * @param mixed $session session for browser interaction
+     * @param Session $session Session for browser interaction
+     * @param EventDispatcherInterface $eventDispatcher Dispatcher shared by browser helpers
      * @param string $ui5AppUrl URL of the UI5 application to load
+     * @param string $locale Locale used for browser interactions
      * @throws RuntimeException
      */
     public function __construct(WorkbenchInterface $workbench, Session $session, EventDispatcherInterface $eventDispatcher, string $ui5AppUrl, string $locale)
@@ -141,8 +145,8 @@ class UI5Browser
         $this->eventDispatcher = $eventDispatcher;
         $this->session = $session;
         $this->workbench = $workbench;
-        $this->waitManager = new UI5WaitManager($session);
-        $this->errorDetector = new UI5ErrorDetector($session);
+        $this->errorDetector = new UI5ErrorDetector($session, $workbench);
+        $this->waitManager = new UI5WaitManager($session, $this->errorDetector);
         $this->locale = $locale;
         $this->pagesVisited[] = StringDataType::substringBefore($ui5AppUrl, '.html');
 
@@ -1808,11 +1812,13 @@ JS
     }
 
     /**
-     * Returns the workbench instance for the application
+     * Returns the browser's workbench.
      *
-     * @return Workbench Application workbench
+     * Helpers must use the same workbench for typed access to application services and logging.
+     *
+     * @return WorkbenchInterface Application workbench.
      */
-    public function getWorkbench()
+    public function getWorkbench(): WorkbenchInterface
     {
         return $this->workbench;
     }
@@ -2863,7 +2869,8 @@ JS
      * never requested - which is how a broken screenshot path stayed invisible for whole runs.
      *
      * WHY it still swallows the throwable: it is called from failure handling, and a screenshot that
-     * cannot be stored must never replace the original test failure.
+     * cannot be stored must never replace the original test failure or its log ID. The shared
+     * warning boundary reports the capture failure without changing ErrorManager's last log ID.
      *
      * @param LogBookInterface|null $logbook Logbook of the failing step, if the caller has one
      * @return void
@@ -2879,7 +2886,7 @@ JS
             ($this->screenshotFn)();
         } catch (Throwable $e) {
             $logbook?->addLine('**WARNING:** No screenshot stored: ' . $e->getMessage());
-            ErrorManager::getInstance()->logException($e, $this->getWorkbench());
+            ErrorManager::logWarning($this->getWorkbench(), 'Could not capture screenshot', $e);
         }
     }
 

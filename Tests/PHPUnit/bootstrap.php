@@ -1,4 +1,15 @@
 <?php
-$loader = require dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'autoload.php';
-$loader->addPsr4('axenox\\BDT\\', dirname(__DIR__, 2));
-$loader->addPsr4('axenox\\GenAI\\', dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'genai');
+$appRoot = dirname(__DIR__, 2);
+$autoloadPaths = [
+    $appRoot . '/vendor/autoload.php',
+    dirname($appRoot, 2) . '/autoload.php'
+];
+
+foreach ($autoloadPaths as $autoloadPath) {
+    if (is_file($autoloadPath)) {
+        require_once $autoloadPath;
+        return;
+    }
+}
+
+throw new \RuntimeException('Composer autoloader not found. Install the app or host dependencies before running PHPUnit.');
